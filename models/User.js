@@ -40,7 +40,34 @@ const userSchema = new  mongoose.Schema({
         default:false
     }
 });
+userSchema.pre('save',async function(next){
+    const User =this;
 
+    //Hash the password only if it has been modified (or is new)
+    if(!User.isModified('password')) return next();
+
+    try{
+         //hash password generation
+         const salt = await bcrypt.genSalt(10);
+
+         //hash passowrd
+         const hashPassword = await bcrypt.hash(User.password,salt);
+         User.password = hashPassword;
+         next();
+    }catch(err){
+         return next(err);
+
+    }
+})
+
+userSchema.methods.comparePassword = async function(candidatePassword){
+    try{
+         const isMatch = await bcrypt.compare(candidatePassword,this.password);
+         return isMatch;
+    }catch(err){
+         throw err;
+    }
+}
 
 const User =mongoose.model('User',userSchema);
 module.exports=User;
